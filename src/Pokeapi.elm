@@ -1,4 +1,4 @@
-module Pokeapi exposing (Pokedex, Pokemon, PokemonResource, PokemonResourceResponse, init, nextPage, previousPage, queryPokemon, viewList)
+module Pokeapi exposing (Pokedex, Pokemon, PokemonResource, PokemonResourceResponse, init, nextPage, previousPage, queryPokemon, updateList, updatePokemon, viewList)
 
 import Html exposing (Html)
 import Html.Attributes as Attrs
@@ -93,7 +93,7 @@ decodePokemon =
 
 viewPokemon : Pokemon -> Html msg
 viewPokemon pokemon =
-    Html.div [ Attrs.class "bg-gray-200 border-2 border-black rounded-lg"]
+    Html.div [ Attrs.class "bg-gray-200 border-2 border-black rounded-lg" ]
         [ Html.img [ Attrs.src ("https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/" ++ String.fromInt pokemon.id ++ ".png") ] []
         ]
 
@@ -116,6 +116,25 @@ init =
     ( pokedex
     , queryList pokedex
     )
+
+
+updateList : Pokedex -> Result Http.Error PokemonResourceResponse -> Pokedex
+updateList pokedex response =
+    { pokedex
+        | list = response
+    }
+
+
+updatePokemon : Pokedex -> Result Http.Error Pokemon -> Pokedex
+updatePokemon pokedex response =
+    case response of
+        Ok pokemon ->
+            { pokedex
+                | openPokemon = Just pokemon
+            }
+
+        Err _ ->
+            { pokedex | openPokemon = Nothing }
 
 
 nextPage : Pokedex -> ( Pokedex, (Result Http.Error PokemonResourceResponse -> msg) -> Cmd msg )

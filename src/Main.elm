@@ -8,13 +8,19 @@ import Http
 import Pokeapi exposing (Pokedex, Pokemon, PokemonResourceResponse)
 
 
-init : ( Pokedex, Cmd Msg )
+init : ( Model, Cmd Msg )
 init =
     let
         ( pokedex, load ) =
             Pokeapi.init
     in
-    ( pokedex, load PageLoaded )
+    ( { pokedex = pokedex, query = Nothing }, load PageLoaded )
+
+
+type alias Model =
+    { pokedex : Pokedex
+    , query : Maybe String
+    }
 
 
 type Msg
@@ -25,25 +31,25 @@ type Msg
     | PokemonLoaded (Result Http.Error Pokemon)
 
 
-update : Msg -> Pokedex -> ( Pokedex, Cmd Msg )
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         PageLoaded result ->
-            ( { model | list = result }, Cmd.none )
+            ( { model | pokedex = Pokeapi.updateList model.pokedex result }, Cmd.none )
 
         LoadNextPage ->
             let
                 ( pokedex, load ) =
-                    Pokeapi.nextPage model
+                    Pokeapi.nextPage model.pokedex
             in
-            ( pokedex, load PageLoaded )
+            ( { model | pokedex = pokedex }, load PageLoaded )
 
         LoadPreviousPage ->
             let
                 ( pokedex, load ) =
-                    Pokeapi.previousPage model
+                    Pokeapi.previousPage model.pokedex
             in
-            ( pokedex, load PageLoaded )
+            ( { model | pokedex = pokedex }, load PageLoaded )
 
         LoadPokemon url ->
             let
@@ -52,17 +58,18 @@ update msg model =
             in
             ( model, load )
 
-        PokemonLoaded (Ok pokemon) ->
-            ( { model | openPokemon = Just pokemon }, Cmd.none )
+        PokemonLoaded result ->
+            let
+                pokedex =
+                    Pokeapi.updatePokemon model.pokedex result
+            in
+            ( { model | pokedex = pokedex }, Cmd.none )
 
-        PokemonLoaded (Err _) ->
-            ( { model | openPokemon = Nothing }, Cmd.none )
 
-
-view : Pokedex -> Html Msg
+view : Model -> Html Msg
 view model =
     div []
-        [ case model.list of
+        [ case model.pokedex.list of
             Err err ->
                 case err of
                     Http.BadBody val ->
@@ -73,7 +80,7 @@ view model =
 
             Ok list ->
                 div [ class "flex flex-col items-center" ]
-                    (Pokeapi.viewList model list.results (\url -> LoadPokemon url)
+                    (Pokeapi.viewList model.pokedex list.results (\url -> LoadPokemon url)
                         ++ [ div [ class "flex gap-4" ]
                                 [ button
                                     [ class "bg-blue-500 text-white p-2 rounded-lg w-32", onClick LoadPreviousPage ]
@@ -89,6 +96,6 @@ view model =
         ]
 
 
-main : Program () Pokedex Msg
+main : Program () Model Msg
 main =
     Browser.element { init = \_ -> init, update = update, view = view, subscriptions = \_ -> Sub.none }
