@@ -1,9 +1,9 @@
 module Main exposing (main)
 
 import Browser
-import Html exposing (Html, button, div, text)
+import Html exposing (Html, button, div, input, label, text)
 import Html.Attributes exposing (class)
-import Html.Events exposing (onClick)
+import Html.Events exposing (onClick, onInput)
 import Http
 import Pokeapi exposing (Pokedex, Pokemon, PokemonResourceResponse)
 
@@ -29,6 +29,7 @@ type Msg
     | LoadPreviousPage
     | LoadPokemon String
     | PokemonLoaded (Result Http.Error Pokemon)
+    | InputQuery String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -65,11 +66,27 @@ update msg model =
             in
             ( { model | pokedex = pokedex }, Cmd.none )
 
+        InputQuery query ->
+            if String.length query > 0 then
+                ( { model | query = Just query }, Cmd.none )
+
+            else
+                ( { model | query = Nothing }, Cmd.none )
+
 
 view : Model -> Html Msg
 view model =
-    div []
-        [ case model.pokedex.list of
+    div [ class "flex flex-col items-center gap-2" ]
+        [ div [ class "border-b border-black pb-4 flex flex-col items-center gap-4" ]
+            [ label [] [ text "Search for a Pokemon", input [ class "border-2", onInput InputQuery ] [] ]
+            , button
+                [ class "bg-blue-500 text-white p-2 rounded-lg w-32"
+                , onClick <| Pokeapi.searchPokemon model.query LoadPokemon
+                ]
+                [ text "Search" ]
+            , Pokeapi.viewPokemon model.pokedex.openPokemon
+            ]
+        , case model.pokedex.list of
             Err err ->
                 case err of
                     Http.BadBody val ->

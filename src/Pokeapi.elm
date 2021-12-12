@@ -1,4 +1,18 @@
-module Pokeapi exposing (Pokedex, Pokemon, PokemonResource, PokemonResourceResponse, init, nextPage, previousPage, queryPokemon, updateList, updatePokemon, viewList)
+module Pokeapi exposing
+    ( Pokedex
+    , Pokemon
+    , PokemonResource
+    , PokemonResourceResponse
+    , init
+    , nextPage
+    , previousPage
+    , queryPokemon
+    , searchPokemon
+    , updateList
+    , updatePokemon
+    , viewList
+    , viewPokemon
+    )
 
 import Html exposing (Html)
 import Html.Attributes as Attrs
@@ -48,21 +62,11 @@ decodePokemonResource =
 
 
 viewList : Pokedex -> List PokemonResource -> (String -> msg) -> List (Html msg)
-viewList pokedex list clickAction =
+viewList _ list clickAction =
     List.map
         (\pokemon ->
             Html.div [ Attrs.class "text-center" ]
                 [ Html.button [ onClick (clickAction pokemon.url) ] [ Html.text (String.toSentenceCase pokemon.name) ]
-                , case pokedex.openPokemon of
-                    Nothing ->
-                        Html.text ""
-
-                    Just openPokemon ->
-                        if openPokemon.name == pokemon.name then
-                            viewPokemon openPokemon
-
-                        else
-                            Html.text ""
                 ]
         )
         list
@@ -91,10 +95,18 @@ decodePokemon =
         |> Decode.required "weight" Decode.int
 
 
-viewPokemon : Pokemon -> Html msg
-viewPokemon pokemon =
-    Html.div [ Attrs.class "bg-gray-200 border-2 border-black rounded-lg" ]
-        [ Html.img [ Attrs.src ("https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/" ++ String.fromInt pokemon.id ++ ".png") ] []
+viewPokemon : Maybe Pokemon -> Html msg
+viewPokemon maybePokemon =
+    Html.div [ Attrs.class "bg-gray-200 border-2 border-black rounded-lg w-32 h-32 flex justify-center items-center" ]
+        [ case maybePokemon of
+            Nothing ->
+                Html.div [ Attrs.class "text-center italic text-gray-800" ]
+                    [ Html.text "No Pokemon Selected" ]
+
+            Just pokemon ->
+                Html.img
+                    [ Attrs.src ("https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/" ++ String.fromInt pokemon.id ++ ".png") ]
+                    []
         ]
 
 
@@ -204,3 +216,19 @@ queryPokemon { url, expect } =
         { url = url
         , expect = Http.expectJson expect decodePokemon
         }
+
+
+searchPokemon : Maybe String -> (String -> msg) -> msg
+searchPokemon maybeQuery msg =
+    let
+        url =
+            rootUrl
+                ++ (case maybeQuery of
+                        Nothing ->
+                            ""
+
+                        Just query ->
+                            query
+                   )
+    in
+        msg url
