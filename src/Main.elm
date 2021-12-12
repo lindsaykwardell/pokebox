@@ -1,5 +1,6 @@
 module Main exposing (main)
 
+import BillsPc exposing (PcStatus, StoredPokemon, decodeStoredPokemon, storePokemon)
 import Browser
 import Html exposing (Html, button, div, input, label, text)
 import Html.Attributes exposing (class)
@@ -14,12 +15,13 @@ init =
         ( pokedex, load ) =
             Pokeapi.init
     in
-    ( { pokedex = pokedex, query = Nothing }, load PageLoaded )
+    ( { pokedex = pokedex, query = Nothing, pcStatus = BillsPc.Idle }, load PageLoaded )
 
 
 type alias Model =
     { pokedex : Pokedex
     , query : Maybe String
+    , pcStatus : PcStatus
     }
 
 
@@ -30,6 +32,8 @@ type Msg
     | LoadPokemon String
     | PokemonLoaded (Result Http.Error Pokemon)
     | InputQuery String
+    | StorePokemon Pokemon
+    | PokemonStored (Result Http.Error StoredPokemon)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -73,6 +77,25 @@ update msg model =
             else
                 ( { model | query = Nothing }, Cmd.none )
 
+        StorePokemon pokemon ->
+            ( model, storePokemon pokemon PokemonStored )
+
+        PokemonStored result ->
+            case result of
+                Result.Ok storedPokemon ->
+                    ( { model
+                        | pcStatus = BillsPc.PokemonStored storedPokemon
+                      }
+                    , Cmd.none
+                    )
+
+                Result.Err error ->
+                    ( { model
+                        | pcStatus = BillsPc.Error error
+                      }
+                    , Cmd.none
+                    )
+
 
 view : Model -> Html Msg
 view model =
@@ -85,6 +108,25 @@ view model =
                 ]
                 [ text "Search" ]
             , Pokeapi.viewPokemon model.pokedex.openPokemon
+            , case model.pokedex.openPokemon of
+                Nothing ->
+                    text ""
+
+                Just pokemon ->
+                    button
+                        [ class "bg-blue-500 text-white p-2 rounded-lg w-40"
+                        , onClick <| StorePokemon pokemon
+                        ]
+                        [ text "Store in Bill's PC" ]
+            , case model.pcStatus of
+                BillsPc.Idle ->
+                    text ""
+
+                BillsPc.PokemonStored storedPokemon ->
+                    text <| storedPokemon.name ++ " was stored in box " ++ String.fromInt storedPokemon.boxId
+
+                BillsPc.Error _ ->
+                    text "Something went wrong! Unable to store your Pokemon."
             ]
         , case model.pokedex.list of
             Err err ->

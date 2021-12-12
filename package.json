@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@prisma/client": "^3.6.0",
-    "elm-vue-bridge": "^1.2.3"
+    "elm-vue-bridge": "^1.2.3",
+    "h3": "^0.3.8"
   }
 }
