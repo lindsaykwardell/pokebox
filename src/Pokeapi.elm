@@ -1,9 +1,12 @@
-module Pokeapi exposing (Pokedex, Pokemon, PokemonResource, PokemonResourceResponse, init, nextPage, previousPage, viewList)
+module Pokeapi exposing (Pokedex, Pokemon, PokemonResource, PokemonResourceResponse, init, nextPage, previousPage, queryPokemon, viewList)
 
 import Html exposing (Html)
+import Html.Attributes as Attrs
+import Html.Events exposing (onClick)
 import Http
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline as Decode
+import String.Extra as String
 
 
 type alias Pokedex =
@@ -44,11 +47,23 @@ decodePokemonResource =
         |> Decode.required "url" Decode.string
 
 
-viewList : List PokemonResource -> List (Html msg)
-viewList list =
+viewList : Pokedex -> List PokemonResource -> (String -> msg) -> List (Html msg)
+viewList pokedex list clickAction =
     List.map
         (\pokemon ->
-            Html.div [] [ Html.text pokemon.name ]
+            Html.div [ Attrs.class "text-center" ]
+                [ Html.button [ onClick (clickAction pokemon.url) ] [ Html.text (String.toSentenceCase pokemon.name) ]
+                , case pokedex.openPokemon of
+                    Nothing ->
+                        Html.text ""
+
+                    Just openPokemon ->
+                        if openPokemon.name == pokemon.name then
+                            viewPokemon openPokemon
+
+                        else
+                            Html.text ""
+                ]
         )
         list
 
@@ -74,6 +89,13 @@ decodePokemon =
         |> Decode.required "is_default" Decode.bool
         |> Decode.required "order" Decode.int
         |> Decode.required "weight" Decode.int
+
+
+viewPokemon : Pokemon -> Html msg
+viewPokemon pokemon =
+    Html.div [ Attrs.class "bg-gray-200 border-2 border-black rounded-lg"]
+        [ Html.img [ Attrs.src ("https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/" ++ String.fromInt pokemon.id ++ ".png") ] []
+        ]
 
 
 offset : Int
@@ -154,17 +176,11 @@ queryList pokedex expect =
 
 
 queryPokemon :
-    { id : Int
+    { url : String
     , expect : Result Http.Error Pokemon -> msg
     }
     -> Cmd msg
-queryPokemon { id, expect } =
-    let
-        url =
-            rootUrl
-                ++ String.fromInt id
-                ++ "/"
-    in
+queryPokemon { url, expect } =
     Http.get
         { url = url
         , expect = Http.expectJson expect decodePokemon

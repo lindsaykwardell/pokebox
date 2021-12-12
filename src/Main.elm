@@ -5,7 +5,7 @@ import Html exposing (Html, button, div, text)
 import Html.Attributes exposing (class)
 import Html.Events exposing (onClick)
 import Http
-import Pokeapi exposing (Pokedex, PokemonResourceResponse)
+import Pokeapi exposing (Pokedex, Pokemon, PokemonResourceResponse)
 
 
 init : ( Pokedex, Cmd Msg )
@@ -21,6 +21,8 @@ type Msg
     = PageLoaded (Result Http.Error PokemonResourceResponse)
     | LoadNextPage
     | LoadPreviousPage
+    | LoadPokemon String
+    | PokemonLoaded (Result Http.Error Pokemon)
 
 
 update : Msg -> Pokedex -> ( Pokedex, Cmd Msg )
@@ -43,6 +45,19 @@ update msg model =
             in
             ( pokedex, load PageLoaded )
 
+        LoadPokemon url ->
+            let
+                load =
+                    Pokeapi.queryPokemon { url = url, expect = PokemonLoaded }
+            in
+            ( model, load )
+
+        PokemonLoaded (Ok pokemon) ->
+            ( { model | openPokemon = Just pokemon }, Cmd.none )
+
+        PokemonLoaded (Err _) ->
+            ( { model | openPokemon = Nothing }, Cmd.none )
+
 
 view : Pokedex -> Html Msg
 view model =
@@ -57,8 +72,8 @@ view model =
                         text "Error"
 
             Ok list ->
-                div [ class "flex flex-col items-center"]
-                    (Pokeapi.viewList list.results
+                div [ class "flex flex-col items-center" ]
+                    (Pokeapi.viewList model list.results (\url -> LoadPokemon url)
                         ++ [ div [ class "flex gap-4" ]
                                 [ button
                                     [ class "bg-blue-500 text-white p-2 rounded-lg w-32", onClick LoadPreviousPage ]
