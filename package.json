@@ -3,6 +3,7 @@
   "scripts": {
     "dev": "nuxi dev",
     "build": "nuxi build",
+    "prebuild": "elm-tooling install",
     "start": "node .output/server/index.mjs"
   },
   "devDependencies": {
